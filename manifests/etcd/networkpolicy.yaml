@@ -4,6 +4,10 @@ kind: NetworkPolicy
 metadata:
   name: etcd-restrict-ports
   namespace: default
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
 spec:
   podSelector:
     matchLabels:
@@ -14,14 +18,20 @@ spec:
         - podSelector:
             matchLabels:
               app: etcd
-      ports: [{ protocol: TCP, port: 2380 }]
+      ports:
+      - protocol: TCP
+        port: 2380
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
-      ports: [{ protocol: TCP, port: 2379 }]
+      ports:
+      - protocol: TCP
+        port: 2379
     - from:
         - podSelector: {}
       ports:
-        - { protocol: TCP, port: 2379 }
-        - { protocol: TCP, port: 8080 }
+      - protocol: TCP
+        port: 2379
+      - protocol: TCP
+        port: 8080

@@ -6,7 +6,9 @@ metadata:
   namespace: default   # or wherever APISIX is
 spec:
   secretName: etcd-client-apisix
-  issuerRef: { name: etcd-ca, kind: Issuer }
+  issuerRef:
+    name: etcd-ca
+    kind: Issuer
   commonName: apisix
   usages: ["digital signature","key encipherment","client auth"]
   renewBefore: 720h

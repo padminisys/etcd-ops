@@ -5,6 +5,10 @@ kind: Service
 metadata:
   name: etcd
   namespace: default
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
 spec:
   type: ClusterIP
   clusterIP: None
@@ -27,6 +31,10 @@ kind: Service
 metadata:
   name: etcd-client
   namespace: default
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
 spec:
   selector:
     app: etcd

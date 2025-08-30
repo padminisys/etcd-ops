@@ -10,3 +10,4 @@ resources:
   - pki-root-ca.yaml
   - cert-etcd-internal.yaml
   - cert-nginx-client.yaml
+  - cert-client-template.yaml

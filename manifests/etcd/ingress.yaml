@@ -4,6 +4,10 @@ kind: Ingress
 metadata:
   name: etcd-public
   namespace: default
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
   annotations:
     kubernetes.io/ingress.class: nginx
     cert-manager.io/cluster-issuer: letsencrypt-prod
@@ -18,7 +22,8 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-ssl-secret: "default/etcd-nginx-client"
 spec:
   tls:
-  - hosts: [etcd.padmini.systems]
+  - hosts:
+    - etcd.padmini.systems
     secretName: etcd-padmini-tls
   rules:
   - host: etcd.padmini.systems

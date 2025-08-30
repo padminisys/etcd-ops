@@ -4,6 +4,10 @@ kind: PodDisruptionBudget
 metadata:
   name: etcd-pdb
   namespace: default
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
 spec:
   minAvailable: 2
   selector:
