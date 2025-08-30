@@ -13,8 +13,8 @@ spec:
     repoURL: https://github.com/padminisys/etcd-ops.git
     targetRevision: main
     path: manifests/etcd
-    directory:
-      recurse: true
+    kustomize:
+      buildOptions: "--enable-helm"
   syncPolicy:
     automated:
       prune: true

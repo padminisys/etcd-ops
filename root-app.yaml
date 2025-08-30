@@ -1,0 +1,32 @@
+# root-app.yaml - Argo CD Application of Applications
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: etcd-ops-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/padminisys/etcd-ops.git
+    targetRevision: main
+    path: manifests
+    directory:
+      recurse: true
+      include: "*/app-*.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m

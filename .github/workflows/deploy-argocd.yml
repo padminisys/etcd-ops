@@ -1,0 +1,175 @@
+name: Deploy Argo CD Application
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'manifests/**'
+      - 'root-app.yaml'
+      - '.github/workflows/deploy-argocd.yml'
+  workflow_dispatch:
+
+env:
+  KUBECTL_VERSION: 'v1.33.2'
+  KUSTOMIZE_VERSION: 'v5.4.3'
+
+jobs:
+  validate:
+    name: Validate Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Setup Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Validate Kustomize Build
+        run: |
+          echo "Validating Kustomize build for etcd manifests..."
+          kustomize build manifests/etcd --dry-run
+
+      - name: Validate Kubernetes Manifests
+        run: |
+          echo "Validating Kubernetes manifests..."
+          kustomize build manifests/etcd | kubectl apply --dry-run=client -f -
+
+      - name: Validate Root App Manifest
+        run: |
+          echo "Validating root-app.yaml..."
+          kubectl apply --dry-run=client -f root-app.yaml
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Kubeconfig
+        run: |
+          echo "Setting up kubeconfig..."
+          mkdir -p ~/.kube
+          echo "${{ secrets.PSYS_CENTOS_1_KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+          
+          # Verify connection
+          kubectl cluster-info --request-timeout=10s
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Setup Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Verify Argo CD Installation
+        run: |
+          echo "Checking if Argo CD is installed..."
+          if ! kubectl get namespace argocd >/dev/null 2>&1; then
+            echo "Warning: argocd namespace not found. Please ensure Argo CD is installed."
+            exit 1
+          fi
+          
+          if ! kubectl get crd applications.argoproj.io >/dev/null 2>&1; then
+            echo "Warning: Argo CD CRDs not found. Please ensure Argo CD is installed."
+            exit 1
+          fi
+          
+          echo "Argo CD installation verified."
+
+      - name: Apply Root Argo CD Application
+        run: |
+          echo "Applying root Argo CD application..."
+          kubectl apply -f root-app.yaml
+          
+          echo "Waiting for application to be created..."
+          kubectl wait --for=condition=Ready application/etcd-ops-root -n argocd --timeout=60s || true
+
+      - name: Verify Application Status
+        run: |
+          echo "Checking application status..."
+          kubectl get applications -n argocd
+          
+          echo "Checking application details..."
+          kubectl describe application etcd-ops-root -n argocd || true
+          
+          echo "Checking if etcd-cluster application was created..."
+          kubectl get application etcd-cluster -n argocd || echo "etcd-cluster application not yet created by root app"
+
+      - name: Monitor Sync Status
+        run: |
+          echo "Monitoring sync status for 2 minutes..."
+          timeout 120s bash -c '
+            while true; do
+              echo "=== $(date) ==="
+              kubectl get applications -n argocd -o wide
+              
+              # Check if etcd-cluster app exists and is synced
+              if kubectl get application etcd-cluster -n argocd >/dev/null 2>&1; then
+                SYNC_STATUS=$(kubectl get application etcd-cluster -n argocd -o jsonpath="{.status.sync.status}" 2>/dev/null || echo "Unknown")
+                HEALTH_STATUS=$(kubectl get application etcd-cluster -n argocd -o jsonpath="{.status.health.status}" 2>/dev/null || echo "Unknown")
+                echo "etcd-cluster - Sync: $SYNC_STATUS, Health: $HEALTH_STATUS"
+                
+                if [[ "$SYNC_STATUS" == "Synced" && "$HEALTH_STATUS" == "Healthy" ]]; then
+                  echo "Application successfully synced and healthy!"
+                  break
+                fi
+              fi
+              
+              sleep 10
+            done
+          ' || echo "Monitoring timeout reached"
+
+      - name: Final Status Check
+        run: |
+          echo "=== Final Status Check ==="
+          kubectl get applications -n argocd -o wide
+          
+          echo "=== Root Application Details ==="
+          kubectl describe application etcd-ops-root -n argocd
+          
+          if kubectl get application etcd-cluster -n argocd >/dev/null 2>&1; then
+            echo "=== etcd-cluster Application Details ==="
+            kubectl describe application etcd-cluster -n argocd
+            
+            echo "=== Checking etcd resources in target namespace ==="
+            kubectl get all -n default -l app.kubernetes.io/name=etcd || echo "No etcd resources found yet"
+          fi
+
+  cleanup-on-failure:
+    name: Cleanup on Failure
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    if: failure()
+    steps:
+      - name: Setup Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.PSYS_CENTOS_1_KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Cleanup Failed Resources
+        run: |
+          echo "Cleaning up potentially failed resources..."
+          kubectl delete application etcd-ops-root -n argocd --ignore-not-found=true
+          kubectl delete application etcd-cluster -n argocd --ignore-not-found=true
+          echo "Cleanup completed."
