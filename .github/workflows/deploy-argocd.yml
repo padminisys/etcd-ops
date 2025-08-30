@@ -35,7 +35,8 @@ jobs:
       - name: Validate Kustomize Build
         run: |
           echo "Validating Kustomize build for etcd manifests..."
-          kustomize build manifests/etcd --dry-run
+          kustomize build manifests/etcd > /tmp/kustomize-output.yaml
+          echo "Kustomize build successful. Generated $(wc -l < /tmp/kustomize-output.yaml) lines of YAML."
 
       - name: Validate Kubernetes Manifests
         run: |
