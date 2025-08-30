@@ -37,16 +37,26 @@ jobs:
           echo "Validating Kustomize build for etcd manifests..."
           kustomize build manifests/etcd > /tmp/kustomize-output.yaml
           echo "Kustomize build successful. Generated $(wc -l < /tmp/kustomize-output.yaml) lines of YAML."
+          
+          echo "Checking for valid YAML syntax..."
+          if command -v yq >/dev/null 2>&1; then
+            yq eval '.' /tmp/kustomize-output.yaml > /dev/null
+            echo "YAML syntax validation passed."
+          else
+            echo "yq not available, skipping YAML syntax validation."
+          fi
 
-      - name: Validate Kubernetes Manifests
+      - name: Validate YAML Syntax
         run: |
-          echo "Validating Kubernetes manifests..."
-          kustomize build manifests/etcd | kubectl apply --dry-run=client -f -
-
-      - name: Validate Root App Manifest
-        run: |
-          echo "Validating root-app.yaml..."
-          kubectl apply --dry-run=client -f root-app.yaml
+          echo "Validating root-app.yaml syntax..."
+          if command -v yq >/dev/null 2>&1; then
+            yq eval '.' root-app.yaml > /dev/null
+            echo "root-app.yaml syntax validation passed."
+          else
+            echo "yq not available, using basic validation."
+            # Basic check for valid YAML structure
+            python3 -c "import yaml; yaml.safe_load(open('root-app.yaml'))" && echo "root-app.yaml is valid YAML"
+          fi
 
   deploy:
     name: Deploy to Kubernetes
@@ -76,6 +86,16 @@ jobs:
         run: |
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
           sudo mv kustomize /usr/local/bin/
+
+      - name: Validate Manifests Against Cluster
+        run: |
+          echo "Validating Kubernetes manifests against cluster..."
+          kustomize build manifests/etcd | kubectl apply --dry-run=client -f -
+          
+          echo "Validating root-app.yaml against cluster..."
+          kubectl apply --dry-run=client -f root-app.yaml
+          
+          echo "Manifest validation against cluster completed successfully."
 
       - name: Verify Argo CD Installation
         run: |
