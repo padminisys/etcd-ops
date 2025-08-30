@@ -4,6 +4,10 @@ kind: StatefulSet
 metadata:
   namespace: default
   name: etcd
+  labels:
+    app: etcd
+    component: database
+    version: v3.6.0
 spec:
   serviceName: etcd
   replicas: 3
@@ -17,8 +21,13 @@ spec:
     metadata:
       labels:
         app: etcd
+        component: database
+        version: v3.6.0
       annotations:
         serviceName: etcd
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       terminationGracePeriodSeconds: 120
       securityContext:
@@ -31,7 +40,8 @@ spec:
               matchExpressions:
               - key: app
                 operator: In
-                values: [etcd]
+                values:
+                - etcd
             topologyKey: "kubernetes.io/hostname"
       topologySpreadConstraints:
       - maxSkew: 1
@@ -59,24 +69,36 @@ spec:
             cpu: "2"
             memory: "4Gi"
         readinessProbe:
-          httpGet: { path: /readyz, port: 8080 }
+          httpGet:
+            path: /health
+            port: 2379
+            scheme: HTTPS
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 5
           failureThreshold: 30
         livenessProbe:
-          httpGet: { path: /livez, port: 8080 }
+          httpGet:
+            path: /health
+            port: 2379
+            scheme: HTTPS
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         env:
         - name: K8S_NAMESPACE
-          valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: HOSTNAME
-          valueFrom: { fieldRef: { fieldPath: metadata.name } }
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: SERVICE_NAME
-          valueFrom: { fieldRef: { fieldPath: metadata.annotations['serviceName'] } }
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['serviceName']
         - name: ETCDCTL_ENDPOINTS
           value: $(HOSTNAME).$(SERVICE_NAME):2379
         - name: URI_SCHEME
@@ -87,7 +109,8 @@ spec:
           value: /etc/etcd/certs/tls.key
         - name: ETCDCTL_CACERT
           value: /etc/etcd/certs/ca.crt
-        command: ["/usr/local/bin/etcd"]
+        command:
+        - "/usr/local/bin/etcd"
         args:
         - --name=$(HOSTNAME)
         - --data-dir=/data
@@ -121,7 +144,8 @@ spec:
           runAsNonRoot: true
           runAsUser: 1001
           runAsGroup: 1001
-          seccompProfile: { type: RuntimeDefault }
+          seccompProfile:
+            type: RuntimeDefault
       volumes:
       - name: etcd-tls
         secret:
@@ -131,7 +155,8 @@ spec:
   - metadata:
       name: etcd-data
     spec:
-      accessModes: ["ReadWriteOnce"]
+      accessModes:
+      - "ReadWriteOnce"
       storageClassName: ceph-block
       resources:
         requests:
