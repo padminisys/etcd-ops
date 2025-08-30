@@ -10,7 +10,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: default
   source:
-    repoURL: https://github.com/REPLACE_ME/etcd-statefulset.git
+    repoURL: https://github.com/padminisys/etcd-ops.git
     targetRevision: main
     path: manifests/etcd
     directory:

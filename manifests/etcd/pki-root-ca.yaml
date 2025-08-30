@@ -4,7 +4,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: selfsigned-bootstrap
-  namespace: default
+  namespace: apisix
 spec:
   selfSigned: {}
 ---
@@ -12,7 +12,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: etcd-root-ca
-  namespace: default
+  namespace: apisix
 spec:
   isCA: true
   commonName: etcd-root-ca
@@ -25,7 +25,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: etcd-ca
-  namespace: default
+  namespace: apisix
 spec:
   ca:
     secretName: etcd-root-ca

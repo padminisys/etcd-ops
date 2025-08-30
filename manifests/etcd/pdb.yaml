@@ -3,7 +3,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: etcd-pdb
-  namespace: default
+  namespace: apisix
   labels:
     app: etcd
     component: database

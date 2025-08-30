@@ -3,7 +3,7 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: etcd-internal
-  namespace: default
+  namespace: apisix
 spec:
   secretName: etcd-internal-tls
   issuerRef:
@@ -15,21 +15,21 @@ spec:
   duration: 8760h       # 1y
   dnsNames:
     - etcd
-    - etcd.default
-    - etcd.default.svc
-    - etcd.default.svc.cluster.local
+    - etcd.apisix
+    - etcd.apisix.svc
+    - etcd.apisix.svc.cluster.local
     - etcd-0
     - etcd-0.etcd
-    - etcd-0.etcd.default
-    - etcd-0.etcd.default.svc
-    - etcd-0.etcd.default.svc.cluster.local
+    - etcd-0.etcd.apisix
+    - etcd-0.etcd.apisix.svc
+    - etcd-0.etcd.apisix.svc.cluster.local
     - etcd-1
     - etcd-1.etcd
-    - etcd-1.etcd.default
-    - etcd-1.etcd.default.svc
-    - etcd-1.etcd.default.svc.cluster.local
+    - etcd-1.etcd.apisix
+    - etcd-1.etcd.apisix.svc
+    - etcd-1.etcd.apisix.svc.cluster.local
     - etcd-2
     - etcd-2.etcd
-    - etcd-2.etcd.default
-    - etcd-2.etcd.default.svc
-    - etcd-2.etcd.default.svc.cluster.local
+    - etcd-2.etcd.apisix
+    - etcd-2.etcd.apisix.svc
+    - etcd-2.etcd.apisix.svc.cluster.local
