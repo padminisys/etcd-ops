@@ -1,0 +1,12 @@
+# manifests/etcd/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - service.yaml
+  - statefulset.yaml
+  - ingress.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - pki-root-ca.yaml
+  - cert-etcd-internal.yaml
+  - cert-nginx-client.yaml

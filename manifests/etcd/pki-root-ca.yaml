@@ -1,0 +1,31 @@
+# manifests/etcd/pki-root-ca.yaml
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-bootstrap
+  namespace: default
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-root-ca
+  namespace: default
+spec:
+  isCA: true
+  commonName: etcd-root-ca
+  secretName: etcd-root-ca
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: etcd-ca
+  namespace: default
+spec:
+  ca:
+    secretName: etcd-root-ca

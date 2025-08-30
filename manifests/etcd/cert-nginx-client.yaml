@@ -1,0 +1,15 @@
+# manifests/etcd/cert-nginx-client.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-nginx-client
+  namespace: default
+spec:
+  secretName: etcd-nginx-client
+  issuerRef:
+    name: etcd-ca
+    kind: Issuer
+  commonName: etcd-nginx
+  usages: ["digital signature","key encipherment","client auth"]
+  renewBefore: 720h
+  duration: 8760h

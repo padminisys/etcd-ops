@@ -1,0 +1,138 @@
+# manifests/etcd/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: default
+  name: etcd
+spec:
+  serviceName: etcd
+  replicas: 3
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+      annotations:
+        serviceName: etcd
+    spec:
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: "OnRootMismatch"
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values: [etcd]
+            topologyKey: "kubernetes.io/hostname"
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: etcd
+      containers:
+      - name: etcd
+        image: quay.io/coreos/etcd:v3.6.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: etcd-client
+          containerPort: 2379
+        - name: etcd-server
+          containerPort: 2380
+        - name: etcd-metrics
+          containerPort: 8080
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        readinessProbe:
+          httpGet: { path: /readyz, port: 8080 }
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 30
+        livenessProbe:
+          httpGet: { path: /livez, port: 8080 }
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        env:
+        - name: K8S_NAMESPACE
+          valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+        - name: HOSTNAME
+          valueFrom: { fieldRef: { fieldPath: metadata.name } }
+        - name: SERVICE_NAME
+          valueFrom: { fieldRef: { fieldPath: metadata.annotations['serviceName'] } }
+        - name: ETCDCTL_ENDPOINTS
+          value: $(HOSTNAME).$(SERVICE_NAME):2379
+        - name: URI_SCHEME
+          value: "https"
+        - name: ETCDCTL_CERT
+          value: /etc/etcd/certs/tls.crt
+        - name: ETCDCTL_KEY
+          value: /etc/etcd/certs/tls.key
+        - name: ETCDCTL_CACERT
+          value: /etc/etcd/certs/ca.crt
+        command: ["/usr/local/bin/etcd"]
+        args:
+        - --name=$(HOSTNAME)
+        - --data-dir=/data
+        - --wal-dir=/data/wal
+        - --listen-peer-urls=$(URI_SCHEME)://0.0.0.0:2380
+        - --listen-client-urls=$(URI_SCHEME)://0.0.0.0:2379
+        - --advertise-client-urls=$(URI_SCHEME)://$(HOSTNAME).$(SERVICE_NAME):2379
+        - --initial-cluster-state=new
+        - --initial-cluster-token=etcd-$(K8S_NAMESPACE)
+        - --initial-cluster=etcd-0=$(URI_SCHEME)://etcd-0.$(SERVICE_NAME):2380,etcd-1=$(URI_SCHEME)://etcd-1.$(SERVICE_NAME):2380,etcd-2=$(URI_SCHEME)://etcd-2.$(SERVICE_NAME):2380
+        - --initial-advertise-peer-urls=$(URI_SCHEME)://$(HOSTNAME).$(SERVICE_NAME):2380
+        - --listen-metrics-urls=http://0.0.0.0:8080
+        # --- TLS hardening ---
+        - --client-cert-auth                                  # REQUIRE client certs
+        - --trusted-ca-file=/etc/etcd/certs/ca.crt
+        - --cert-file=/etc/etcd/certs/tls.crt
+        - --key-file=/etc/etcd/certs/tls.key
+        - --peer-client-cert-auth                             # REQUIRE mTLS for peers
+        - --peer-trusted-ca-file=/etc/etcd/certs/ca.crt
+        - --peer-cert-file=/etc/etcd/certs/tls.crt
+        - --peer-key-file=/etc/etcd/certs/tls.key
+        volumeMounts:
+        - name: etcd-data
+          mountPath: /data
+        - name: etcd-tls
+          mountPath: /etc/etcd/certs
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          seccompProfile: { type: RuntimeDefault }
+      volumes:
+      - name: etcd-tls
+        secret:
+          secretName: etcd-internal-tls
+          optional: false
+  volumeClaimTemplates:
+  - metadata:
+      name: etcd-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ceph-block
+      resources:
+        requests:
+          storage: 10Gi

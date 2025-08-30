@@ -1,0 +1,35 @@
+# manifests/etcd/cert-etcd-internal.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-internal
+  namespace: default
+spec:
+  secretName: etcd-internal-tls
+  issuerRef:
+    name: etcd-ca
+    kind: Issuer
+  commonName: etcd
+  usages: ["digital signature","key encipherment","server auth","client auth"]
+  renewBefore: 720h     # 30d before expiry
+  duration: 8760h       # 1y
+  dnsNames:
+    - etcd
+    - etcd.default
+    - etcd.default.svc
+    - etcd.default.svc.cluster.local
+    - etcd-0
+    - etcd-0.etcd
+    - etcd-0.etcd.default
+    - etcd-0.etcd.default.svc
+    - etcd-0.etcd.default.svc.cluster.local
+    - etcd-1
+    - etcd-1.etcd
+    - etcd-1.etcd.default
+    - etcd-1.etcd.default.svc
+    - etcd-1.etcd.default.svc.cluster.local
+    - etcd-2
+    - etcd-2.etcd
+    - etcd-2.etcd.default
+    - etcd-2.etcd.default.svc
+    - etcd-2.etcd.default.svc.cluster.local

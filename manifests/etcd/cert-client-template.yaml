@@ -1,0 +1,13 @@
+# manifests/etcd/cert-client-template.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-client-apisix
+  namespace: default   # or wherever APISIX is
+spec:
+  secretName: etcd-client-apisix
+  issuerRef: { name: etcd-ca, kind: Issuer }
+  commonName: apisix
+  usages: ["digital signature","key encipherment","client auth"]
+  renewBefore: 720h
+  duration: 8760h

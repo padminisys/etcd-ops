@@ -1,0 +1,27 @@
+# manifests/etcd/networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: etcd-restrict-ports
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: etcd
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: etcd
+      ports: [{ protocol: TCP, port: 2380 }]
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports: [{ protocol: TCP, port: 2379 }]
+    - from:
+        - podSelector: {}
+      ports:
+        - { protocol: TCP, port: 2379 }
+        - { protocol: TCP, port: 8080 }
