@@ -1,0 +1,20 @@
+# manifests/etcd/etcdctl-debug.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcdctl-debug
+  namespace: apisix
+spec:
+  restartPolicy: Never
+  containers:
+  - name: etcdctl
+    image: bitnami/etcd:3.5.15
+    command: ["bash","-lc","sleep infinity"]
+    volumeMounts:
+    - name: etcd-tls
+      mountPath: /etc/etcd/certs
+      readOnly: true
+  volumes:
+  - name: etcd-tls
+    secret:
+      secretName: etcd-internal-tls
