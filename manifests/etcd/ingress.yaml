@@ -17,7 +17,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
 
-    # 🔒 Optional: restrict who can hit the edge (fill in your real IPs/ranges)
+    # 🔒 Optional: restrict who can hit the edge (fill in your real IPs)
     # nginx.ingress.kubernetes.io/whitelist-source-range: "203.0.113.10/32,198.51.100.22/32"
 
     # TLS to etcd backend: verify etcd's cert with your CA; no client cert presented
