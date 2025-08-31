@@ -9,7 +9,7 @@ metadata:
     version: v3.6.0
 spec:
   serviceName: etcd
-  replicas: 1   # single-member while you debug; scale to 3 later
+  replicas: 1
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
@@ -111,10 +111,10 @@ spec:
         - --initial-cluster=etcd-0=$(URI_SCHEME)://etcd-0.$(SERVICE_NAME):2380
         - --initial-advertise-peer-urls=$(URI_SCHEME)://$(HOSTNAME).$(SERVICE_NAME):2380
         - --listen-metrics-urls=http://0.0.0.0:8080
-        # --- TLS server only (no client cert required) ---
+        # TLS server-only (no client certs required)
         - --cert-file=/etc/etcd/certs/tls.crt
         - --key-file=/etc/etcd/certs/tls.key
-        # peer TLS (OK to keep even with 1 replica; no peer client auth)
+        # peer certs (harmless with 1 member; useful when you scale later)
         - --peer-cert-file=/etc/etcd/certs/tls.crt
         - --peer-key-file=/etc/etcd/certs/tls.key
         volumeMounts:
@@ -134,7 +134,7 @@ spec:
       volumes:
       - name: etcd-tls
         secret:
-          secretName: etcd-internal-tls   # already present & Ready
+          secretName: etcd-internal-tls
           optional: false
   volumeClaimTemplates:
   - metadata:
