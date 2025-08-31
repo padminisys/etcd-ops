@@ -33,3 +33,4 @@ spec:
     - etcd-2.etcd.apisix
     - etcd-2.etcd.apisix.svc
     - etcd-2.etcd.apisix.svc.cluster.local
+    - etcd.padmini.systems
