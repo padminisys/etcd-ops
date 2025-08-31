@@ -1,0 +1,15 @@
+# manifests/etcd/cert-client-ramanuj.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: etcd-client-ramanuj
+  namespace: apisix
+spec:
+  secretName: etcd-client-ramanuj
+  issuerRef:
+    kind: Issuer
+    name: etcd-ca
+  commonName: ramanuj
+  duration: 8760h        # 1 year
+  renewBefore: 720h      # 30 days
+  usages: ["digital signature","key encipherment","client auth"]
