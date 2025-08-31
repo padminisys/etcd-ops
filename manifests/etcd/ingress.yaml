@@ -8,28 +8,22 @@ metadata:
     component: database
     version: v3.6.0
   annotations:
-    # Public TLS from Let's Encrypt
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    
-    # gRPC frontend
-    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    # NGINX controller
+    kubernetes.io/ingress.class: nginx
+    # gRPC over TLS to backend (important!)
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    # helpful for gRPC streams / slow links
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-
-    # --- Client mTLS at the edge (your custom CA verifies client certs) ---
-    nginx.ingress.kubernetes.io/auth-tls-secret: "apisix/etcd-root-ca"
-    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
-    nginx.ingress.kubernetes.io/auth-tls-verify-depth: "2"
-
-    # --- mTLS from Ingress -> etcd backend ---
+    # 🔒 Allow only these source IPs at the edge (comma-separated)
+    nginx.ingress.kubernetes.io/whitelist-source-range: "<YOUR_CIDR_LIST>"
+    # TLS to etcd backend: verify server cert using your CA; no client cert presented
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "on"
     nginx.ingress.kubernetes.io/proxy-ssl-verify-depth: "2"
     nginx.ingress.kubernetes.io/proxy-ssl-server-name: "on"
-    # SNI must match SAN in your internal cert
     nginx.ingress.kubernetes.io/proxy-ssl-name: "etcd.apisix.svc.cluster.local"
-    # Secret with: ca.crt (to verify etcd), tls.crt/tls.key (client cert for NGINX)
+    # Secret must contain ca.crt (trusted CA for etcd). Using your existing secret is fine.
     nginx.ingress.kubernetes.io/proxy-ssl-secret: "apisix/etcd-nginx-client"
 spec:
   ingressClassName: nginx

@@ -9,8 +9,7 @@ metadata:
     version: v3.6.0
 spec:
   serviceName: etcd
-  # Single-member for debugging
-  replicas: 1
+  replicas: 1   # single-member while you debug; scale to 3 later
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
@@ -33,7 +32,6 @@ spec:
       securityContext:
         fsGroup: 1001
         fsGroupChangePolicy: "OnRootMismatch"
-      # Make anti-affinity non-blocking while you debug
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -70,7 +68,6 @@ spec:
           limits:
             cpu: "2"
             memory: "4Gi"
-        # Probe the non-TLS endpoints (no client cert needed)
         readinessProbe:
           httpGet:
             path: /readyz
@@ -100,16 +97,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.annotations['serviceName']
-        - name: ETCDCTL_ENDPOINTS
-          value: $(HOSTNAME).$(SERVICE_NAME):2379
         - name: URI_SCHEME
           value: "https"
-        - name: ETCDCTL_CERT
-          value: /etc/etcd/certs/tls.crt
-        - name: ETCDCTL_KEY
-          value: /etc/etcd/certs/tls.key
-        - name: ETCDCTL_CACERT
-          value: /etc/etcd/certs/ca.crt
         command: ["/usr/local/bin/etcd"]
         args:
         - --name=$(HOSTNAME)
@@ -119,17 +108,13 @@ spec:
         - --listen-client-urls=$(URI_SCHEME)://0.0.0.0:2379
         - --advertise-client-urls=$(URI_SCHEME)://$(HOSTNAME).$(SERVICE_NAME):2379
         - --initial-cluster-state=new
-        # Single-member static bootstrap
         - --initial-cluster=etcd-0=$(URI_SCHEME)://etcd-0.$(SERVICE_NAME):2380
         - --initial-advertise-peer-urls=$(URI_SCHEME)://$(HOSTNAME).$(SERVICE_NAME):2380
         - --listen-metrics-urls=http://0.0.0.0:8080
-        # --- TLS hardening ---
-        - --client-cert-auth
-        - --trusted-ca-file=/etc/etcd/certs/ca.crt
+        # --- TLS server only (no client cert required) ---
         - --cert-file=/etc/etcd/certs/tls.crt
         - --key-file=/etc/etcd/certs/tls.key
-        - --peer-client-cert-auth
-        - --peer-trusted-ca-file=/etc/etcd/certs/ca.crt
+        # peer TLS (OK to keep even with 1 replica; no peer client auth)
         - --peer-cert-file=/etc/etcd/certs/tls.crt
         - --peer-key-file=/etc/etcd/certs/tls.key
         volumeMounts:
@@ -149,7 +134,7 @@ spec:
       volumes:
       - name: etcd-tls
         secret:
-          secretName: etcd-internal-tls
+          secretName: etcd-internal-tls   # already present & Ready
           optional: false
   volumeClaimTemplates:
   - metadata:
