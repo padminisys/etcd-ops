@@ -5,3 +5,4 @@ chart
 apisix-etcd-client.key
 apisix-etcd-client.crt
 apisix-etcd-ca.crt
+secret.txt
