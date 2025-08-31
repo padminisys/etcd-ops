@@ -1,0 +1,90 @@
+# Use your existing namespace 'apisix' via: -n apisix (not set in values)
+
+# 1) Do NOT install the bundled etcd; point APISIX to your existing etcd over mTLS.
+etcd:
+  enabled: false
+
+externalEtcd:
+  host:
+    - "https://etcd-client.apisix.svc.cluster.local:2379"
+  user: ""         # no basic auth
+  password: ""     # using mTLS instead
+
+# 2) Mount the etcd client secret (already issued by cert-manager).
+extraVolumes:
+  - name: etcd-client-apisix
+    secret:
+      secretName: etcd-client-apisix
+extraVolumeMounts:
+  - name: etcd-client-apisix
+    mountPath: /etc/apisix/etcd-tls
+    readOnly: true
+
+apisix:
+  # Security-leaning but simple
+  enableHTTP2: true
+  enableServerTokens: false
+
+  # Tell APISIX to trust the etcd CA from your client secret
+  ssl:
+    existingCASecret: "etcd-client-apisix"
+    certCAFilename: "ca.crt"
+    sslProtocols: "TLSv1.2 TLSv1.3"
+
+  # Ensure we use etcd provider
+  deployment:
+    mode: traditional
+    role: "traditional"
+    role_traditional:
+      config_provider: "etcd"
+
+  # Admin API kept internal (ClusterIP) + strong keys via Secret (see note below).
+  admin:
+    enabled: true
+    enable_admin_ui: true
+    type: ClusterIP
+    # Provide your own secret with long random keys (created below)
+    credentials:
+      secretName: "apisix-admin-credentials"
+    # Allow only cluster/private ranges to hit Admin service (ingress is disabled below)
+    allow:
+      ipList:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 127.0.0.0/8
+
+  # APISIX → etcd mTLS (use the mounted secret paths)
+  # NOTE: Most recent charts support this `apisix.config` block.
+  config:
+    etcd:
+      host:
+        - "https://etcd-client.apisix.svc.cluster.local:2379"
+      tls:
+        verify: true
+        cert: "/etc/apisix/etcd-tls/tls.crt"
+        key:  "/etc/apisix/etcd-tls/tls.key"
+        sni:  "etcd.apisix.svc.cluster.local"
+
+# 3) Expose APISIX gateway via your existing nginx-ingress on apisix.padmini.systems
+service:
+  type: ClusterIP
+  http:
+    enabled: true
+  tls:
+    servicePort: 443
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+  hosts:
+    - host: apisix.padmini.systems
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: apisix-tls   # <- ensure this TLS secret exists (e.g., via cert-manager)
+      hosts:
+        - apisix.padmini.systems

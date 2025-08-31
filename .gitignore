@@ -1,3 +1,7 @@
 ca-client-auth.crt
 client.crt
 client.key
+chart
+apisix-etcd-client.key
+apisix-etcd-client.crt
+apisix-etcd-ca.crt

@@ -1,0 +1,49 @@
+# client cert
+kubectl -n apisix get secret etcd-client-apisix \
+  -o jsonpath='{.data.tls\.crt}' | base64 -d > apisix-etcd-client.crt
+
+# client key
+kubectl -n apisix get secret etcd-client-apisix \
+  -o jsonpath='{.data.tls\.key}' | base64 -d > apisix-etcd-client.key
+
+# CA — prefer the one in the client secret
+kubectl -n apisix get secret etcd-client-apisix \
+    -o jsonpath='{.data.ca\.crt}' | base64 -d > apisix-etcd-ca.crt
+---
+
+
+# via Ingress/LB
+etcdctl --endpoints=https://etcd.padmini.systems:32379 \
+  --cacert=./apisix-etcd-ca.crt \
+  --cert=./apisix-etcd-client.crt \
+  --key=./apisix-etcd-client.key \
+  endpoint health
+
+# inside-cluster Service (if you kubectl exec into a toolbox pod)
+etcdctl --endpoints=https://etcd-client.apisix.svc.cluster.local:2379 \
+  --cacert=/etc/etcd/tls/ca.crt \
+  --cert=/etc/etcd/tls/tls.crt \
+  --key=/etc/etcd/tls/tls.key \
+  endpoint health
+
+---
+
+# add repo and update
+helm repo add apisix https://charts.apiseven.com
+helm repo update
+
+# show default values to stdout
+helm show values apisix/apisix > apisix-values.yaml
+
+# (optional) also download the chart tgz for inspection
+helm pull apisix/apisix --untar --untardir ./apisix-chart
+
+---
+
+# generate long random keys
+ADMIN_KEY=$(openssl rand -hex 24)
+VIEWER_KEY=$(openssl rand -hex 24)
+
+kubectl -n apisix create secret generic apisix-admin-credentials \
+  --from-literal=admin="$ADMIN_KEY" \
+  --from-literal=viewer="$VIEWER_KEY"

@@ -4,6 +4,8 @@ kind: Application
 metadata:
   name: etcd-cluster
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   source:
@@ -14,7 +16,7 @@ spec:
       recurse: true
   destination:
     server: https://kubernetes.default.svc
-    namespace: apisix   # default target; your manifests also pin namespace explicitly
+    namespace: apisix
   syncPolicy:
     automated:
       prune: true
