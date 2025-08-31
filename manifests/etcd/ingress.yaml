@@ -1,3 +1,4 @@
+# manifests/etcd/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,30 +9,32 @@ metadata:
     component: database
     version: v3.6.0
   annotations:
-    kubernetes.io/ingress.class: nginx
+    # Edge TLS
     cert-manager.io/cluster-issuer: letsencrypt-prod
-
-    # gRPC over **TLS** to the backend
     nginx.ingress.kubernetes.io/backend-protocol: "GRPCS"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
 
-    # 🔒 OPTIONAL: limit who can hit the edge (fill in your real IPs/ranges)
-    # nginx.ingress.kubernetes.io/whitelist-source-range: "203.0.113.10/32,198.51.100.22/32"
+    # ---- Client mTLS at the edge (verify client against YOUR CA) ----
+    # Secret must contain: ca.crt (your etcd CA). You have this in etcd-root-ca.
+    nginx.ingress.kubernetes.io/auth-tls-secret: "apisix/etcd-root-ca"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/auth-tls-verify-depth: "2"
+    # (optional) pass client cert upstream if you ever want to inspect it
+    # nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream: "true"
 
-    # NGINX → etcd mTLS: verify etcd with your CA and present NGINX client cert
+    # ---- NGINX → etcd mTLS (already set up) ----
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "on"
     nginx.ingress.kubernetes.io/proxy-ssl-verify-depth: "2"
     nginx.ingress.kubernetes.io/proxy-ssl-server-name: "on"
     nginx.ingress.kubernetes.io/proxy-ssl-name: "etcd.apisix.svc.cluster.local"
-    # This secret must contain: ca.crt (to verify etcd), tls.crt & tls.key (client cert/key for NGINX)
+    # Secret with ca.crt (to verify etcd) + tls.crt/tls.key (client cert for NGINX)
     nginx.ingress.kubernetes.io/proxy-ssl-secret: "apisix/etcd-nginx-client"
 spec:
   ingressClassName: nginx
   tls:
-  - hosts:
-    - etcd.padmini.systems
+  - hosts: [etcd.padmini.systems]
     secretName: etcd-padmini-tls
   rules:
   - host: etcd.padmini.systems
