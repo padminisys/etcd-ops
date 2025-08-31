@@ -5,8 +5,9 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'app-etcd.yaml'
+      - 'app-*.yaml'                 # ← include both apps
       - 'manifests/**'
+      - 'apisix/**'                  # ← pick up values file changes
       - '.github/workflows/apply-argocd.yml'
   workflow_dispatch:
 
@@ -20,6 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
       - name: Setup kubeconfig
         run: |
           mkdir -p ~/.kube
@@ -27,17 +33,16 @@ jobs:
           chmod 600 ~/.kube/config
           kubectl cluster-info
 
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: ${{ env.KUBECTL_VERSION }}
-
       - name: Verify Argo CD CRD
         run: |
           kubectl get ns argocd
           kubectl get crd applications.argoproj.io
 
-      - name: Apply Application
+      - name: Apply Applications (etcd first, then apisix)
         run: |
+          # Order of apply doesn't strictly matter—sync-wave controls real order—
+          # but we'll apply etcd first for clarity.
           kubectl apply -f app-etcd.yaml
-          kubectl -n argocd get application etcd-cluster -o wide
+          kubectl apply -f app-apisix.yaml
+          echo "--- Current Application statuses ---"
+          kubectl -n argocd get applications
