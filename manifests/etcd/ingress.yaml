@@ -16,8 +16,6 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-    # 🔒 Allow only these source IPs at the edge (comma-separated)
-    nginx.ingress.kubernetes.io/whitelist-source-range: "<YOUR_CIDR_LIST>"
     # TLS to etcd backend: verify server cert using your CA; no client cert presented
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "on"
     nginx.ingress.kubernetes.io/proxy-ssl-verify-depth: "2"
