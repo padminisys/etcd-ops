@@ -50,6 +50,22 @@ apisix:
         - 172.16.0.0/12
         - 192.168.0.0/16
         - 127.0.0.0/8
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        kubernetes.io/ingress.class: nginx
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+        nginx.ingress.kubernetes.io/ssl-redirect: "true"
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+      hosts:
+        - host: apisix.padmini.systems
+          paths:
+            - /
+      tls:
+        - secretName: apisix-tls
+          hosts:
+            - apisix.padmini.systems        
 
 # 3) Expose APISIX via your existing NGINX Ingress on apisix.padmini.systems
 service:
@@ -57,20 +73,3 @@ service:
   externalTrafficPolicy: ""
   http:
     enabled: true
-
-ingress:
-  enabled: true
-  className: nginx
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-  hosts:
-    - host: apisix.padmini.systems
-      paths:
-        - /
-  tls:
-    - secretName: apisix-tls
-      hosts:
-        - apisix.padmini.systems
