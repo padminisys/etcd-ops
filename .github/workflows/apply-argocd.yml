@@ -1,0 +1,43 @@
+# .github/workflows/apply-argocd.yml
+name: Apply Argo CD Application
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app-etcd.yaml'
+      - 'manifests/**'
+      - '.github/workflows/apply-argocd.yml'
+  workflow_dispatch:
+
+env:
+  KUBECTL_VERSION: 'v1.33.2'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.PSYS_CENTOS_1_KUBE_CONFIG }}" | base64 --decode > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl cluster-info
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: ${{ env.KUBECTL_VERSION }}
+
+      - name: Verify Argo CD CRD
+        run: |
+          kubectl get ns argocd
+          kubectl get crd applications.argoproj.io
+
+      - name: Apply Application
+        run: |
+          kubectl apply -f app-etcd.yaml
+          kubectl -n argocd get application etcd-cluster -o wide

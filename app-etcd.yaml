@@ -1,4 +1,4 @@
-# manifests/etcd/app-etcd.yaml
+# app-etcd.yaml
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -6,22 +6,18 @@ metadata:
   namespace: argocd
 spec:
   project: default
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: default
   source:
     repoURL: https://github.com/padminisys/etcd-ops.git
     targetRevision: main
     path: manifests/etcd
-    kustomize:
-      buildOptions: "--enable-helm"
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apisix   # default target; your manifests also pin namespace explicitly
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    retry:
-      limit: 5
-      backoff:
-        duration: 10s
-        factor: 2
-        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true

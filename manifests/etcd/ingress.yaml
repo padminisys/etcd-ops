@@ -1,4 +1,3 @@
-# manifests/etcd/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -17,8 +16,9 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-ssl-verify: "on"
     nginx.ingress.kubernetes.io/proxy-ssl-verify-depth: "2"
     nginx.ingress.kubernetes.io/proxy-ssl-server-name: "on"
+    # SNI must match a SAN in your internal cert (note the namespace!)
     nginx.ingress.kubernetes.io/proxy-ssl-name: "etcd.apisix.svc.cluster.local"
-    # This secret must contain ca.crt, tls.crt, tls.key (cert-manager will include ca.crt)
+    # Secret WITH ca.crt, tls.crt, tls.key (issued by etcd-ca)
     nginx.ingress.kubernetes.io/proxy-ssl-secret: "apisix/etcd-nginx-client"
 spec:
   tls:
