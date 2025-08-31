@@ -68,8 +68,7 @@ ingress:
   hosts:
     - host: apisix.padmini.systems
       paths:
-        - path: /
-          pathType: Prefix
+        - /
   tls:
     - secretName: apisix-tls
       hosts:
