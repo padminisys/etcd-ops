@@ -37,7 +37,6 @@ apisix:
     role_traditional:
       config_provider: etcd
 
-  # Admin API stays internal; keys via your Secret
   admin:
     enabled: true
     enable_admin_ui: true
@@ -61,11 +60,18 @@ apisix:
         nginx.ingress.kubernetes.io/proxy-set-headers: "apisix/apisix-admin-proxy-headers"
         nginx.ingress.kubernetes.io/app-root: /ui/
       hosts:
-        - host: apisix.padmini.systems
+        - host: apisix-admin.padmini.systems
           paths:
             - /ui
             - /
+            - /apisix/admin
+        - host: apisix.padmini.systems
+          paths:
+            - /apisix/admin
       tls:
+        - secretName: apisix-admin-tls
+          hosts:
+            - apisix-admin.padmini.systems
         - secretName: apisix-tls
           hosts:
             - apisix.padmini.systems
