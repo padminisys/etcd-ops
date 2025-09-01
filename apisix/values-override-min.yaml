@@ -58,14 +58,21 @@ apisix:
         nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
         nginx.ingress.kubernetes.io/ssl-redirect: "true"
         cert-manager.io/cluster-issuer: letsencrypt-prod
+        # send the right proto/port so UI doesn't redirect to :9180
+        nginx.ingress.kubernetes.io/configuration-snippet: |
+          proxy_set_header X-Forwarded-Proto https;
+          proxy_set_header X-Forwarded-Port 443;
+        # when someone visits "/", bounce them to "/ui/"
+        nginx.ingress.kubernetes.io/app-root: /ui/
       hosts:
         - host: apisix.padmini.systems
           paths:
-            - /
+            - /ui
+            - /                # optional but handy; app-root will redirect to /ui/
       tls:
         - secretName: apisix-tls
           hosts:
-            - apisix.padmini.systems        
+            - apisix.padmini.systems
 
 # 3) Expose APISIX via your existing NGINX Ingress on apisix.padmini.systems
 service:
